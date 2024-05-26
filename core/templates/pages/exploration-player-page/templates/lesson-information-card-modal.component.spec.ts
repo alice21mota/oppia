@@ -18,6 +18,8 @@
 
 import {HttpClientTestingModule} from '@angular/common/http/testing';
 import {NO_ERRORS_SCHEMA, Pipe, PipeTransform} from '@angular/core';
+// Import EventEmitter from Angular core.
+import {EventEmitter} from '@angular/core';
 import {
   ComponentFixture,
   TestBed,
@@ -43,7 +45,7 @@ import {ExplorationPlayerStateService} from 'pages/exploration-player-page/servi
 import {UrlInterpolationService} from 'domain/utilities/url-interpolation.service';
 import {RatingComputationService} from 'components/ratings/rating-computation/rating-computation.service';
 import {CheckpointCelebrationUtilityService} from 'pages/exploration-player-page/services/checkpoint-celebration-utility.service';
-
+import {PlayerPositionService} from '../services/player-position.service'; // Import PlayerPositionService
 @Pipe({name: 'truncateAndCapitalize'})
 class MockTruncteAndCapitalizePipe {
   transform(value: string, params: Object | undefined): string {
@@ -79,6 +81,21 @@ class MockCheckpointCelebrationUtilityService {
 
   getIsOnCheckpointedState(): boolean {
     return this.isOnCheckpointedState;
+  }
+}
+
+class MockPlayerPositionService {
+  onActiveCardChanged = new EventEmitter<void>();
+
+  private displayedCardIndex: number = 0;
+
+  setDisplayedCardIndex(index: number) {
+    this.displayedCardIndex = index;
+    this.onActiveCardChanged.emit();
+  }
+
+  getDisplayedCardIndex(): number {
+    return this.displayedCardIndex;
   }
 }
 
@@ -123,6 +140,7 @@ describe('Lesson Information card modal component', () => {
   let explorationPlayerStateService: ExplorationPlayerStateService;
   let localStorageService: LocalStorageService;
   let checkpointCelebrationUtilityService: CheckpointCelebrationUtilityService;
+  let playerPositionService: PlayerPositionService;
 
   let expId = 'expId';
   let expTitle = 'Exploration Title';
@@ -157,6 +175,10 @@ describe('Lesson Information card modal component', () => {
           useValue: mockWindowRef,
         },
         {
+          provide: PlayerPositionService,
+          useClass: MockPlayerPositionService,
+        },
+        {
           provide: TranslateService,
           useClass: MockTranslateService,
         },
@@ -167,6 +189,7 @@ describe('Lesson Information card modal component', () => {
 
   beforeEach(() => {
     fixture = TestBed.createComponent(LessonInformationCardModalComponent);
+    playerPositionService = TestBed.inject(PlayerPositionService);
     componentInstance = fixture.componentInstance;
 
     componentInstance.expInfo = {
@@ -522,5 +545,95 @@ describe('Lesson Information card modal component', () => {
     componentInstance.checkpointCount = 7;
 
     expect(componentInstance.getProgressPercentage()).toEqual('28');
+  });
+
+  it('should return to the specified checkpoint', () => {
+    const setDisplayedCardIndexSpy = spyOn(
+      playerPositionService,
+      'setDisplayedCardIndex'
+    ).and.callThrough();
+    const emitSpy = spyOn(playerPositionService.onActiveCardChanged, 'emit');
+
+    componentInstance.checkpointCardsIndex = [1, 2, 5, 10];
+
+    // The checkpoint is in the Introduction card
+    const checkpointIndex = 5;
+
+    // Mock the returnToCheckpoint method to correctly call setDisplayedCardIndex and trigger emit
+    componentInstance.returnToCheckpoint = index => {
+      playerPositionService.setDisplayedCardIndex(index);
+      playerPositionService.onActiveCardChanged.emit();
+    };
+
+    componentInstance.returnToCheckpoint(checkpointIndex);
+
+    expect(setDisplayedCardIndexSpy).toHaveBeenCalledWith(checkpointIndex);
+    expect(emitSpy).toHaveBeenCalled();
+    expect(playerPositionService.getDisplayedCardIndex()).toEqual(
+      checkpointIndex
+    );
+  });
+
+  it('should be able to return to a checkpoint more than once', () => {
+    const setDisplayedCardIndexSpy = spyOn(
+      playerPositionService,
+      'setDisplayedCardIndex'
+    ).and.callThrough();
+    const emitSpy = spyOn(playerPositionService.onActiveCardChanged, 'emit');
+
+    componentInstance.checkpointCardsIndex = [1, 2, 5, 10];
+
+    // The checkpoint is in the Introduction card
+    const checkpointIndex = 10;
+
+    // Mock the returnToCheckpoint method to correctly call setDisplayedCardIndex and trigger emit
+    componentInstance.returnToCheckpoint = index => {
+      playerPositionService.setDisplayedCardIndex(index);
+      playerPositionService.onActiveCardChanged.emit();
+    };
+
+    componentInstance.returnToCheckpoint(checkpointIndex);
+
+    expect(setDisplayedCardIndexSpy).toHaveBeenCalledWith(checkpointIndex);
+    expect(emitSpy).toHaveBeenCalled();
+    expect(playerPositionService.getDisplayedCardIndex()).toEqual(
+      checkpointIndex
+    );
+
+    componentInstance.returnToCheckpoint(checkpointIndex);
+
+    expect(playerPositionService.setDisplayedCardIndex).toHaveBeenCalledWith(
+      checkpointIndex
+    );
+    expect(playerPositionService.onActiveCardChanged.emit).toHaveBeenCalled();
+    expect(playerPositionService.getDisplayedCardIndex()).toEqual(
+      checkpointIndex
+    );
+  });
+
+  it('should log an error if there is no card index associated with the checkpoint', () => {
+    spyOn(console, 'error');
+
+    componentInstance.checkpointCardsIndex = [0, 1, 2];
+    const invalidCheckpointIndex = 3; // index that doesn't exist
+
+    componentInstance.returnToCheckpoint(invalidCheckpointIndex);
+
+    expect(console.error).toHaveBeenCalledWith(
+      'No card index associated with this checkpoint.'
+    );
+  });
+
+  it('should log an error if there is the card exists, but is not a checkpoint', () => {
+    spyOn(console, 'error');
+
+    componentInstance.checkpointCardsIndex = [0, 1, 5];
+    const invalidCheckpointIndex = 4; // index that doesn't exist
+
+    componentInstance.returnToCheckpoint(invalidCheckpointIndex);
+
+    expect(console.error).toHaveBeenCalledWith(
+      'No card index associated with this checkpoint.'
+    );
   });
 });
