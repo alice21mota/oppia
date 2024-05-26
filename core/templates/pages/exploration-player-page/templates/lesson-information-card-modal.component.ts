@@ -26,7 +26,7 @@ import {UrlService} from 'services/contextual/url.service';
 import {UserService} from 'services/user.service';
 import {WindowRef} from 'services/contextual/window-ref.service';
 import {LocalStorageService} from 'services/local-storage.service';
-import {PlayerPositionService} from 'pages/exploration-player-page/services/player-position.service'; // Import PlayerPositionService
+import {PlayerPositionService} from 'pages/exploration-player-page/services/player-position.service';
 import {
   I18nLanguageCodeService,
   TranslationKeyType,
@@ -283,7 +283,6 @@ export class LessonInformationCardModalComponent extends ConfirmOrCancelModal {
     const cardIndex = this.checkpointCardsIndex[index];
     if (cardIndex !== undefined) {
       this.playerPositionService.setDisplayedCardIndex(cardIndex);
-      // Emit an event or call a method if you need to update the view or perform additional actions
       this.playerPositionService.onActiveCardChanged.emit();
     } else {
       console.error('No card index associated with this checkpoint.');

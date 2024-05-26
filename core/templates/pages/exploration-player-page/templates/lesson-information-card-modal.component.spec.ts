@@ -45,7 +45,8 @@ import {ExplorationPlayerStateService} from 'pages/exploration-player-page/servi
 import {UrlInterpolationService} from 'domain/utilities/url-interpolation.service';
 import {RatingComputationService} from 'components/ratings/rating-computation/rating-computation.service';
 import {CheckpointCelebrationUtilityService} from 'pages/exploration-player-page/services/checkpoint-celebration-utility.service';
-import {PlayerPositionService} from '../services/player-position.service'; // Import PlayerPositionService
+import {PlayerPositionService} from '../services/player-position.service';
+
 @Pipe({name: 'truncateAndCapitalize'})
 class MockTruncteAndCapitalizePipe {
   transform(value: string, params: Object | undefined): string {
@@ -547,6 +548,23 @@ describe('Lesson Information card modal component', () => {
     expect(componentInstance.getProgressPercentage()).toEqual('28');
   });
 
+  it('should be able to return to all checkpoints', () => {
+    componentInstance.checkpointCardsIndex = [1, 2, 5, 10];
+    spyOn(playerPositionService, 'setDisplayedCardIndex').and.callThrough();
+    spyOn(playerPositionService.onActiveCardChanged, 'emit');
+
+    // Return to each checkpoint and verify that the correct card index is set.
+    for (let i = 0; i < componentInstance.checkpointCardsIndex.length; i++) {
+      const cardIndex = componentInstance.checkpointCardsIndex[i];
+      componentInstance.returnToCheckpoint(i);
+      expect(playerPositionService.setDisplayedCardIndex).toHaveBeenCalledWith(
+        cardIndex
+      );
+      expect(playerPositionService.onActiveCardChanged.emit).toHaveBeenCalled();
+      expect(playerPositionService.getDisplayedCardIndex()).toEqual(cardIndex);
+    }
+  });
+
   it('should return to the specified checkpoint', () => {
     const setDisplayedCardIndexSpy = spyOn(
       playerPositionService,
@@ -556,10 +574,10 @@ describe('Lesson Information card modal component', () => {
 
     componentInstance.checkpointCardsIndex = [1, 2, 5, 10];
 
-    // The checkpoint is in the Introduction card
+    // The checkpoint is in the Introduction card.
     const checkpointIndex = 5;
 
-    // Mock the returnToCheckpoint method to correctly call setDisplayedCardIndex and trigger emit
+    // Mock the returnToCheckpoint method to correctly call setDisplayedCardIndex and trigger emit.
     componentInstance.returnToCheckpoint = index => {
       playerPositionService.setDisplayedCardIndex(index);
       playerPositionService.onActiveCardChanged.emit();
@@ -583,10 +601,10 @@ describe('Lesson Information card modal component', () => {
 
     componentInstance.checkpointCardsIndex = [1, 2, 5, 10];
 
-    // The checkpoint is in the Introduction card
+    // The checkpoint is in the Introduction card.
     const checkpointIndex = 10;
 
-    // Mock the returnToCheckpoint method to correctly call setDisplayedCardIndex and trigger emit
+    // Mock the returnToCheckpoint method to correctly call setDisplayedCardIndex and trigger emit.
     componentInstance.returnToCheckpoint = index => {
       playerPositionService.setDisplayedCardIndex(index);
       playerPositionService.onActiveCardChanged.emit();
@@ -615,7 +633,7 @@ describe('Lesson Information card modal component', () => {
     spyOn(console, 'error');
 
     componentInstance.checkpointCardsIndex = [0, 1, 2];
-    const invalidCheckpointIndex = 3; // index that doesn't exist
+    const invalidCheckpointIndex = 3; // Index that doesn't exist.
 
     componentInstance.returnToCheckpoint(invalidCheckpointIndex);
 
@@ -628,7 +646,7 @@ describe('Lesson Information card modal component', () => {
     spyOn(console, 'error');
 
     componentInstance.checkpointCardsIndex = [0, 1, 5];
-    const invalidCheckpointIndex = 4; // index that doesn't exist
+    const invalidCheckpointIndex = 4; // Index that doesn't exist.
 
     componentInstance.returnToCheckpoint(invalidCheckpointIndex);
 
